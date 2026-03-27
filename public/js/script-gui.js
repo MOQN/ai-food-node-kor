@@ -1,19 +1,23 @@
 let pane;
 let isGuiVisible = true;
 let ui = {
+  sequence: 'Current: 0 | Total: 0',
+  orbitFullControlEnabled: true,
   fps: 0,
-  depthScale: 120,
-  meshTilt: -0.30,
-  audioVolume: 0,
-  audioVolumeDelta: 0,
-  deltaExponent: 3,
-  deltaPeakDecay: 0.992,
-  burstThreshold: 0.75,
-  burstSpawnDistance: 1000
+  depthScale: 100,
+  meshTilt: 0.0,
+  meshScale: 1.8,
+  incomingDepthOffset: -420,
+  outgoingDepthOffset: 120
 };
 
 function setupGUI() {
   pane = new Pane();
+  pane.addBinding(ui, 'sequence', {
+    label: 'Sequence',
+    readonly: true,
+  });
+  pane.addBlade({ view: 'separator' });
   pane.addBinding(ui, 'fps', {
     label: 'FPS',
     readonly: true,
@@ -27,69 +31,57 @@ function setupGUI() {
   });
   pane.addBlade({ view: 'separator' });
 
-  pane.addBlade({ view: 'separator' });
-  pane.addBinding(ui, 'audioVolume', {
-    label: 'Audio Volume',
-    readonly: true,
-    view: 'graph',
-    min: 0,
-    max: 1,
-  });
-  pane.addBinding(ui, 'audioVolumeDelta', {
-    label: 'Volume Delta',
-    readonly: true,
-    view: 'graph',
-    min: 0,
-    max: 1,
+  const orbitToggle = pane.addBinding(ui, 'orbitFullControlEnabled', {
+    label: 'Orbit Full Control',
   });
 
-  pane.addBinding(ui, 'deltaExponent', {
-    label: 'Delta Exp',
-    min: 2,
-    max: 4,
-    step: 0.1,
-  });
-
-  pane.addBinding(ui, 'deltaPeakDecay', {
-    label: 'Delta Decay',
-    min: 0.97,
-    max: 0.999,
-    step: 0.001,
-  });
-
-  const burstBinding = pane.addBinding(ui, 'burstThreshold', {
-    label: 'Burst Threshold',
-    min: 0,
-    max: 1,
-    step: 0.01,
-  });
-
-  burstBinding.on('change', (ev) => {
-    if (typeof window.setParticleBurstThreshold === 'function') {
-      window.setParticleBurstThreshold(ev.value);
+  orbitToggle.on('change', (ev) => {
+    if (typeof window.setOrbitControlEnabled === 'function') {
+      window.setOrbitControlEnabled(ev.value);
     }
   });
 
-  if (typeof window.setParticleBurstThreshold === 'function') {
-    window.setParticleBurstThreshold(ui.burstThreshold);
+  if (typeof window.setOrbitControlEnabled === 'function') {
+    window.setOrbitControlEnabled(ui.orbitFullControlEnabled);
   }
 
-  const burstDistanceBinding = pane.addBinding(ui, 'burstSpawnDistance', {
-    label: 'Burst World Z',
-    min: -2000,
-    max: 1000,
+  pane.addBlade({ view: 'separator' });
+
+  pane.addBinding(ui, 'depthScale', {
+    label: 'Depth Scale',
+    min: 0,
+    max: 100,
     step: 1,
   });
 
-  burstDistanceBinding.on('change', (ev) => {
-    if (typeof window.setParticleBurstSpawnDistance === 'function') {
-      window.setParticleBurstSpawnDistance(ev.value);
-    }
+  pane.addBinding(ui, 'meshTilt', {
+    label: 'Mesh Tilt',
+    min: -0.8,
+    max: 0.8,
+    step: 0.01,
   });
 
-  if (typeof window.setParticleBurstSpawnDistance === 'function') {
-    window.setParticleBurstSpawnDistance(ui.burstSpawnDistance);
-  }
+  pane.addBinding(ui, 'meshScale', {
+    label: 'Mesh Scale',
+    min: 0.3,
+    max: 2.5,
+    step: 0.01,
+  });
+
+  pane.addBinding(ui, 'incomingDepthOffset', {
+    label: 'Incoming Z',
+    min: -800,
+    max: 0,
+    step: 1,
+  });
+
+  pane.addBinding(ui, 'outgoingDepthOffset', {
+    label: 'Outgoing Z',
+    min: 0,
+    max: 200,
+    step: 1,
+  });
+
 }
 
 function updateGUI() {
@@ -112,4 +104,15 @@ function toggleGUI() {
   }
 }
 
+function setSequenceInfo(currentIndex, totalCount) {
+  const safeTotal = Number.isFinite(Number(totalCount)) ? Math.max(0, Number(totalCount)) : 0;
+  const safeCurrent = Number.isFinite(Number(currentIndex))
+    ? Math.max(0, Math.min(Number(currentIndex), Math.max(0, safeTotal - 1)))
+    : 0;
+
+  ui.sequence = `Current: ${safeCurrent} | Total: ${safeTotal}`;
+}
+
+window.ui = ui;
+window.setSequenceInfo = setSequenceInfo;
 window.toggleGUI = toggleGUI;

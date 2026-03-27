@@ -20,14 +20,16 @@ const INSTRUMENT_MAP = {
 };
 
 const OUTPUT_FOLDER = "AIxFood";
-const DEFAULT_AUDIO_DURATION_SECONDS = 120;
-const DEFAULT_LYRICS_REPEAT_COUNT = 3;
-const DEFAULT_CUSTOM_LYRICS_DIRECTION = '';
 const DEFAULT_SPEED_MOOD = 'Steady & Medium';
 const DEFAULT_VIBE_MOOD = 'Just Chilling';
 const TOTAL_LOOP_VISUALS = 3;
 const VISUAL_LOOP_INTERVAL_MS = 1200;
 const IMAGE_REGEN_PROMPT_APPEND = ', high-energy action performance, energetic stage presence, dramatic camera pan right';
+const SIMPLE_SWAP_MODE = true;
+
+// Dynamic image pairs loaded from server
+let imagePairs = [];
+let currentImageIndex = -1;
 
 // ==========================================
 // History Management & Band Class
@@ -102,26 +104,6 @@ function getFormattedTimestamp() {
   const min = String(now.getMinutes()).padStart(2, '0');
   const ss = String(now.getSeconds()).padStart(2, '0');
   return `${yy}${mm}${dd}-${hh}${min}${ss}`;
-}
-
-function determineAudioSettings({ speedMood, vibeMood }) {
-  const bpmBySpeedMood = {
-    'Chill & Slow': 82,
-    'Steady & Medium': 110,
-    'Upbeat & Fast': 148,
-    'Hyper & Super Fast': 190
-  };
-
-  const keyscaleByVibeMood = {
-    'A Bit Melancholic': 'A minor',
-    'Just Chilling': 'C major',
-    'Super Excited!': 'E major'
-  };
-
-  return {
-    bpm: bpmBySpeedMood[speedMood] || bpmBySpeedMood[DEFAULT_SPEED_MOOD],
-    keyscale: keyscaleByVibeMood[vibeMood] || keyscaleByVibeMood[DEFAULT_VIBE_MOOD]
-  };
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -239,12 +221,7 @@ function inviteNextBand() {
     topArea.classList.remove('message-hidden');
   }
 
-  if (outImage) outImage.src = '';
-  if (outAudio) outAudio.src = '';
-  if (audioProgressBar) audioProgressBar.style.width = '0%';
-
   if (statusImage) statusImage.innerText = 'IMAGE';
-  if (statusAudio) statusAudio.innerText = 'AUDIO';
 
   document.querySelectorAll('.loader-text, .circular-loader').forEach((element) => {
     element.classList.remove('done');
@@ -270,7 +247,6 @@ function isResultStepVisible() {
 function displayVisual(visual, options = {}) {
   if (!visual?.imageDataURI) return;
 
-  outImage.src = visual.imageDataURI;
   initThreeJSShader(visual.imageDataURI, visual.depthDataURI, options);
 }
 
@@ -293,46 +269,12 @@ function startVisualLoop(token) {
   }, VISUAL_LOOP_INTERVAL_MS);
 }
 
-function buildStructuredLyrics({ foods, tastes, genre, repeatCount, customDirection, foodComment, tasteComment }) {
-  const foodLine = foods.length > 0 ? foods.join(', ') : 'signature flavor';
-  const tasteLine = tastes.length > 0 ? tastes.join(', ') : 'vivid emotions';
-
-  const foodPhrase = foodComment ? `${foodLine}, ${foodComment}` : foodLine;
-  const tastePhrase = tasteComment ? `${tasteLine}, ${tasteComment}` : tasteLine;
-
-  const foodRepeat = Array(4).fill(foodPhrase).join('\n');
-  const tasteRepeat = Array(4).fill(tastePhrase).join('\n');
-
-  const chorusMixed = [foodPhrase, tastePhrase, foodPhrase, tastePhrase].join('\n');
-
-  return [
-    '[Verse 1 - Male Vocal]',
-    foodRepeat,
-    '',
-    '[Verse 2 - Female Vocal]',
-    tasteRepeat,
-    '',
-    '[Pre-Chorus - Male & Female]',
-    foodLine,
-    tasteLine,
-    '',
-    '[Chorus - Male + Female + Chorus Stack]',
-    chorusMixed,
-    '',
-    customDirection ? `[Custom Direction]\n${customDirection}` : ''
-  ].filter(Boolean).join('\n');
-}
-
 // DOM Elements
 const dropOverlay = document.getElementById('drop-overlay');
 const fileInput = document.getElementById('file-input');
 const generateBtn = document.getElementById('generate-btn');
 
-const outImage = document.getElementById('out-image');
-const outAudio = document.getElementById('out-audio');
-const audioProgressBar = document.getElementById('audio-progress-bar');
 const statusImage = document.getElementById('status-image');
-const statusAudio = document.getElementById('status-audio');
 
 const commentsFood = document.getElementById('comments-food');
 const commentsTaste = document.getElementById('comments-taste');
@@ -376,8 +318,16 @@ function init() {
   bindCommentTextareaEnterAdvance();
   updateStep4GenerateState();
 
+  // Load image pairs dynamically from server
+  loadImagePairs();
+
   const restartBtn = document.getElementById('restart-btn');
   if (restartBtn) restartBtn.addEventListener('click', inviteNextBand);
+
+  if (SIMPLE_SWAP_MODE) {
+    document.body.classList.add('simple-swap-mode');
+    showStep('result');
+  }
 }
 
 function bindCommentTextareaEnterAdvance() {
@@ -475,15 +425,6 @@ window.addEventListener('dragleave', (e) => { e.preventDefault(); dragCounter--;
 window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('drop', (e) => { e.preventDefault(); dragCounter = 0; if (dropOverlay) dropOverlay.classList.remove('show'); if (e.dataTransfer.files && e.dataTransfer.files.length > 0) processFile(e.dataTransfer.files[0]); });
 
-// Audio Player
-outAudio.addEventListener('timeupdate', () => {
-  if (outAudio.duration) {
-    const percentage = (outAudio.currentTime / outAudio.duration) * 100;
-    audioProgressBar.style.width = percentage + '%';
-  }
-});
-outAudio.addEventListener('ended', () => audioProgressBar.style.width = '0%');
-
 // Main Execution
 if (generateBtn) {
   generateBtn.addEventListener('click', () => {
@@ -492,7 +433,6 @@ if (generateBtn) {
 
     document.querySelectorAll('.loader-text, .circular-loader').forEach(el => el.classList.remove('done'));
     if (statusImage) statusImage.innerText = "VISUAL";
-    if (statusAudio) statusAudio.innerText = "AUDIO";
 
     const foods = Array.from(selections.food);
     const tastes = Array.from(selections.taste);
@@ -513,22 +453,6 @@ if (generateBtn) {
 
     const imagePrompt = `the food remain completely unchanged and realistic, preserving the original appearance and texture, photorealistic food, macro photography, tilt-shift effect, highly detailed. tiny food-shape musicians are generated based on ${foodStr}${foodDetail} and performing as a small cozy band across a food landscape. cute miniature ${foodStr} characters playing ${instruments}${genreDetail}. The overall atmosphere has a ${tasteStr}${tasteDetail} and ${genreStr} vibe, passionate and dynamic performance.`;
 
-    const audioPrompt = `Priority: make low-mid frequencies dominant with a hard-hitting kick and an aggressive bassline. A highly rhythmic, energetic track with a strong driving beat. Style: ${genreStr}${genreDetail}. Vibe and mood: ${tasteStr}${tasteDetail}. Current energy: ${speedMood}. Emotional tone: ${vibeMood}. Inspired by a culinary experience of ${foodStr}${foodDetail}.`;
-
-    const finalLyrics = buildStructuredLyrics({
-      foods,
-      tastes,
-      genre: genreStr,
-      repeatCount: DEFAULT_LYRICS_REPEAT_COUNT,
-      customDirection: DEFAULT_CUSTOM_LYRICS_DIRECTION,
-      foodComment,
-      tasteComment
-    });
-
-    const durationSeconds = DEFAULT_AUDIO_DURATION_SECONDS;
-
-    const audioSettings = determineAudioSettings({ speedMood, vibeMood });
-
     currentSessionTimestamp = getFormattedTimestamp();
 
     const payloadImage = {
@@ -538,21 +462,8 @@ if (generateBtn) {
       filePrefix: `${OUTPUT_FOLDER}/ai-food-${currentSessionTimestamp}`
     };
 
-    const payloadAudio = {
-      promptText: audioPrompt,
-      lyrics: finalLyrics,
-      seed: Math.floor(Math.random() * 1000000),
-      bpm: audioSettings.bpm,
-      keyscale: audioSettings.keyscale,
-      durationSeconds,
-      filePrefix: `${OUTPUT_FOLDER}/ai-food-${currentSessionTimestamp}-audio`
-    };
-
-    Promise.all([
-      fetchMedia('/api/generate-image', payloadImage, 'image'),
-      fetchMedia('/api/generate-audio', payloadAudio, 'audio')
-    ]).then(([imageData, audioDataURI]) => {
-      if (imageData && imageData.success && audioDataURI) {
+    fetchMedia('/api/generate-image', payloadImage, 'image').then((imageData) => {
+      if (imageData && imageData.success) {
         setContainerThreeOpacityState('active');
 
         const initialVisual = {
@@ -567,7 +478,7 @@ if (generateBtn) {
           currentSessionTimestamp,
           imageData.imageDataURI,
           imageData.depthDataURI,
-          audioDataURI
+          null
         );
         newBand.buildPlaneMesh(); // This creates the bordered plane group
 
@@ -575,22 +486,12 @@ if (generateBtn) {
         historyGrid.push(newBand);
         console.log("Total Bands in History:", historyGrid.length);
 
-        // 3. Update DOM elements
-        outAudio.src = audioDataURI;
-
         if (statusImage) statusImage.innerText = "IMAGE & DEPTH READY";
-        if (statusAudio) statusAudio.innerText = "AUDIO READY";
 
         showStep('result');
         showBandArrivalMessage();
 
         displayVisual(initialVisual, { animateIn: true, pulseOnSwap: false });
-
-        if (typeof window.playGeneratedAudioInP5 === 'function') {
-          window.playGeneratedAudioInP5(audioDataURI);
-        } else {
-          outAudio.play();
-        }
 
         void generateAdditionalVisuals(imagePrompt, visualToken);
       } else {
@@ -611,8 +512,7 @@ async function fetchMedia(endpoint, payload, type) {
     });
     const result = await res.json();
 
-    const loaderId = type === 'image' ? 'loader-image' : 'loader-audio';
-    document.getElementById(loaderId)?.classList.add('done');
+    document.getElementById('loader-image')?.classList.add('done');
     document.getElementById(`status-${type}`)?.classList.add('done');
 
     if (!result.success) {
@@ -645,7 +545,7 @@ async function fetchNextImageIteration(payload) {
 }
 
 async function generateAdditionalVisuals(originalPrompt, token) {
-  let referenceImage = generatedVisuals[0]?.imageDataURI || outImage.src;
+  let referenceImage = generatedVisuals[0]?.imageDataURI || currentBase64Image;
   const hyperDynamicPrompt = `${originalPrompt}${IMAGE_REGEN_PROMPT_APPEND}`;
 
   while (generatedVisuals.length < TOTAL_LOOP_VISUALS) {
@@ -690,19 +590,74 @@ function initThreeJSShader(imageURI, depthURI, options) {
 init();
 
 // to test
-async function loadShaderTestImages() {
-  const testImagePath = '/shaderTest/image.png';
-  const testDepthPath = '/shaderTest/depth.png';
+async function loadImagePairs() {
+  try {
+    console.log('[ImagePairs] Fetching from /api/image-pairs...');
+    const res = await fetch('/api/image-pairs');
 
-  if (outImage) {
-    outImage.src = testImagePath;
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await res.text();
+      console.error('[ImagePairs] Received non-JSON response:', text.substring(0, 200));
+      throw new Error(`Expected JSON but got: ${contentType || 'unknown'}`);
+    }
+
+    const data = await res.json();
+    imagePairs = data.pairs || [];
+    console.log(`[ImagePairs] Loaded ${imagePairs.length} image pairs:`, imagePairs);
+
+    // Update GUI sequence display
+    if (window.updateSequenceDisplay) {
+      window.updateSequenceDisplay(imagePairs.length);
+    }
+  } catch (err) {
+    console.error('[ImagePairs] Failed to load:', err);
+    imagePairs = [];
   }
+}
+
+function updateSequenceDisplay(totalCount, currentIdx = -1) {
+  const safeTotal = Number.isFinite(Number(totalCount)) ? Math.max(0, Number(totalCount)) : 0;
+  const safeCurrent = currentIdx >= 0 ? currentIdx : 0;
+
+  if (typeof window.setSequenceInfo === 'function') {
+    window.setSequenceInfo(safeCurrent, safeTotal);
+  } else if (typeof window.ui !== 'undefined') {
+    window.ui.sequence = `Current: ${safeCurrent} | Total: ${safeTotal}`;
+  }
+}
+
+function resetImageSequence() {
+  currentImageIndex = -1;
+  updateSequenceDisplay(imagePairs.length, 0);
+}
+
+async function loadShaderTestImages() {
+  if (imagePairs.length === 0) {
+    console.warn('[loadShaderTestImages] No image pairs loaded');
+    return;
+  }
+
+  currentImageIndex = (currentImageIndex + 1) % imagePairs.length;
+  const pair = imagePairs[currentImageIndex];
 
   showStep('result');
 
+  // Update GUI sequence display
+  if (window.updateSequenceDisplay) {
+    window.updateSequenceDisplay(imagePairs.length, currentImageIndex);
+  }
+
   const applyWhenReady = () => {
     if (window.updateThreeJSMaterial) {
-      initThreeJSShader(testImagePath, testDepthPath);
+      initThreeJSShader(pair.image, pair.depth, {
+        animateIn: true,
+        swapDuration: 8.0
+      });
     } else {
       setTimeout(applyWhenReady, 100);
     }
@@ -712,3 +667,6 @@ async function loadShaderTestImages() {
 }
 
 window.loadShaderTestImages = loadShaderTestImages;
+window.updateSequenceDisplay = updateSequenceDisplay;
+window.loadImagePairs = loadImagePairs;
+window.resetImageSequence = resetImageSequence;

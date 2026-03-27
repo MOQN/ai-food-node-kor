@@ -1,29 +1,60 @@
 /* ==========================================
-   Reset & Variables (Monochrome Wireframe with Neon Accents)
+   Minimal Style - Mesh Visualization Only
    ========================================== */
+
 :root {
-  --color-main-neon-green: #39ff14;
-  --color-sub-purple: #9d1fff;
-  --color-accent-pink: #ff007f;
-  --bg-color: #000000;
-  --text-primary: #ffffff;
-  --text-secondary: #777777;
-  --border-color: #333333;
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --border-width: 1px;
-  --result-control-width: min(320px, calc(100vw - 48px));
+  --bg-color: #ffffff;
 }
 
 body {
   margin: 0;
   padding: 0;
-  font-family: var(--font-family);
   background-color: var(--bg-color);
-  color: var(--text-primary);
   min-height: 100vh;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+}
+
+#memory-text {
+  position: fixed;
+  left: 70%;
+  top: 50%;
+  transform: translate(-50%, calc(-50% + 300px));
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 32px;
+  font-weight: 400;
+  /* font-style: italic; */
+  font-synthesis: style;
+  letter-spacing: 5px;
+  color: #333333;
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+  pointer-events: none;
+  font-family: 'Noto Serif KR', 'Noto Serif SC', serif;
+  user-select: none;
+}
+
+.memory-line {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  white-space: nowrap;
+}
+
+.memory-comma {
+  display: inline-block;
+  transform: translate(8px, -22px);
+}
+
+.memory-line-left {
+  margin-top: 46px;
+}
+
+#memory-text.visible {
+  opacity: 1;
 }
 
 #container-three {
@@ -33,16 +64,6 @@ body {
   width: 100vw;
   height: 100vh;
   z-index: 0;
-  opacity: 1;
-  transition: opacity 0.6s ease;
-}
-
-#container-three.dimmed {
-  opacity: 0.2;
-}
-
-#container-three.active {
-  opacity: 1;
 }
 
 #container-p5 {
@@ -57,334 +78,4 @@ body {
 
 .tp-dfwv {
   z-index: 99999 !important;
-}
-
-.app-container {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 20;
-  pointer-events: none;
-}
-
-.step {
-  position: absolute;
-  width: 100%;
-  max-width: 1080px;
-  padding: 20px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
-  transform: translateY(20px);
-}
-
-.step.active {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-.step.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.conversational-title {
-  font-size: 3.5rem;
-  font-weight: 450;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  margin: 0 0 10px 0;
-  line-height: 1.2;
-}
-
-.conversational-sub {
-  font-size: 1.35rem;
-  color: var(--color-sub-purple);
-  font-weight: 500;
-  letter-spacing: 2px;
-  margin-bottom: 50px;
-}
-
-.tag-group.centered {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 15px;
-  margin: 40px 0 30px 0;
-  width: 100%;
-  max-width: 860px;
-}
-
-.step3-mood-title {
-  margin: 8px 0 12px;
-  font-size: 1rem;
-  font-weight: 500;
-  letter-spacing: 1.2px;
-  color: var(--text-primary);
-}
-
-.step3-mood-group {
-  margin: 8px 0 16px;
-}
-
-.tag-btn {
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: 12px 24px;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border-radius: 40px;
-}
-
-.tag-btn:hover {
-  border-color: #888;
-  color: #ccc;
-}
-
-.tag-btn.active {
-  border-color: var(--color-main-neon-green);
-  color: var(--bg-color);
-  background-color: var(--color-main-neon-green);
-  font-weight: bold;
-  box-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
-}
-
-.centered-input {
-  width: 100%;
-  max-width: 820px;
-  background: rgba(0, 0, 0, 0.6);
-  border: none;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 15px 0;
-  font-size: 1rem;
-  text-align: center;
-  margin-bottom: 40px;
-  outline: none;
-  transition: border-color 0.3s;
-  resize: none;
-}
-
-.centered-input:focus {
-  border-bottom-color: var(--color-main-neon-green);
-}
-
-.btn {
-  width: auto;
-  min-width: 280px;
-  padding: 18px 40px;
-  font-size: 0.9rem;
-  font-weight: 400;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  cursor: pointer;
-  background: rgba(0, 0, 0, 0.8);
-  transition: all 0.3s ease;
-  border-radius: 2px;
-  margin: 0 auto;
-}
-
-.ghost-btn {
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-}
-
-.ghost-btn:hover {
-  border-color: var(--color-main-neon-green);
-  box-shadow: 0 0 10px rgba(57, 255, 20, 0.2);
-}
-
-.primary-btn {
-  border: 1px solid #555;
-  color: var(--text-primary);
-}
-
-.primary-btn:not(:disabled):hover {
-  border-color: var(--color-accent-pink);
-  color: var(--color-accent-pink);
-  background-color: rgba(255, 0, 127, 0.05);
-  box-shadow: 0 0 15px rgba(255, 0, 127, 0.3);
-}
-
-.btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  border-color: var(--border-color);
-  color: var(--text-secondary);
-}
-
-.loaders-container {
-  display: flex;
-  justify-content: center;
-  gap: 80px;
-  margin-top: 50px;
-  width: 100%;
-}
-
-.loader-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.circular-loader {
-  width: 100px;
-  height: 100px;
-  border: 3px solid var(--border-color);
-  border-top: 5px solid var(--color-accent-pink);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  transition: all 0.3s ease;
-}
-
-.circular-loader.done {
-  animation: none;
-  border: 2px solid var(--color-main-neon-green);
-  background-color: rgba(57, 255, 20, 0.05);
-  box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
-}
-
-.loader-text {
-  letter-spacing: 4px;
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: color 0.3s ease;
-}
-
-.loader-text.done {
-  color: var(--color-main-neon-green);
-}
-
-@keyframes spin {
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-#drop-overlay {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  right: 20px;
-  bottom: 20px;
-  background-color: rgba(0, 0, 0, 0.95);
-  border: 2px dashed var(--color-main-neon-green);
-  z-index: 9999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
-
-#drop-overlay.show {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: all;
-  box-shadow: 0 0 50px rgba(57, 255, 20, 0.2) inset;
-}
-
-#drop-overlay h1 {
-  font-size: 2rem;
-  font-weight: 200;
-  letter-spacing: 6px;
-  color: var(--color-main-neon-green);
-  pointer-events: none;
-}
-
-.hidden {
-  display: none !important;
-}
-
-/* ==========================================
-   RESULT SCREEN (Split Layout & Center Clear)
-   ========================================== */
-#step-result {
-  max-width: none;
-  width: 100vw;
-  height: 100vh;
-  padding: 0;
-  display: flex !important;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  pointer-events: none;
-  /* Crucial: Allows OrbitControls to work in the center */
-}
-
-#step-result.hidden {
-  display: none !important;
-}
-
-/* Top Area Container */
-.result-top-area {
-  margin-top: 12vh;
-  pointer-events: auto;
-  /* Re-enable clicks for UI elements */
-  transition: opacity 0.35s ease;
-}
-
-.result-top-area.message-hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-#result-arrival-title {
-  font-weight: 600;
-}
-
-#result-arrival-sub {
-  font-size: 1.6rem;
-  font-weight: 600;
-}
-
-/* Bottom Area Container */
-.result-bottom-area {
-  margin-bottom: 8vh;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
-  width: var(--result-control-width);
-  pointer-events: auto;
-  /* Re-enable clicks for UI elements */
-}
-
-/* Custom Audio Player */
-.custom-audio-player {
-  width: 100%;
-  height: 8px;
-  border: var(--border-width) solid var(--border-color);
-  background: transparent;
-  position: relative;
-  overflow: hidden;
-}
-
-#audio-progress-bar {
-  height: 100%;
-  width: 0%;
-  background-color: var(--color-main-neon-green);
-  transition: width 0.1s linear;
-}
-
-#restart-btn {
-  width: 100%;
-  min-width: 0;
-  margin-top: 0 !important;
 }
