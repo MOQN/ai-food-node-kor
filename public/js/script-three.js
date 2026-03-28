@@ -7,6 +7,9 @@ let controls;
 let time, frame = 0;
 const fps = { value: 0 };
 
+let zoomVelocity = 0;
+let _pinchLastDist = null;
+
 function initThree() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xffffff);
@@ -25,12 +28,10 @@ function initThree() {
   container.appendChild(renderer.domElement);
 
   controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableZoom = true;
-  controls.zoomSpeed = 0.75;
+  controls.enableZoom = false; // zoom handled manually with custom damping
   controls.minDistance = 350;
   controls.maxDistance = 3200;
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.025;
+  controls.enableDamping = false;
   controls.enableRotate = false;
   controls.enablePan = false;
   controls.enableKeys = false;
@@ -42,8 +43,61 @@ function initThree() {
 
   setupThree();
   setupGUI();
+  initCustomZoom();
 
   renderer.setAnimationLoop(animate);
+}
+
+function initCustomZoom() {
+  renderer.domElement.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    zoomVelocity += e.deltaY * ui.zoomSpeed;
+  }, { passive: false });
+
+  renderer.domElement.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      _pinchLastDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }, { passive: false });
+
+  renderer.domElement.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 2) return;
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    if (_pinchLastDist !== null) {
+      zoomVelocity += (_pinchLastDist - dist) * 2 * ui.zoomSpeed;
+    }
+    _pinchLastDist = dist;
+    e.preventDefault();
+  }, { passive: false });
+
+  renderer.domElement.addEventListener('touchend', () => {
+    _pinchLastDist = null;
+  });
+}
+
+function applyCustomZoom() {
+  if (!camera || !controls || zoomVelocity === 0) return;
+  const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+  const dist = camera.position.distanceTo(controls.target);
+  const newDist = THREE.MathUtils.clamp(
+    dist + zoomVelocity,
+    controls.minDistance,
+    controls.maxDistance
+  );
+  camera.position.copy(controls.target).addScaledVector(dir, newDist);
+
+  // Treat zoomDamping as resistance: lower values glide longer, higher values stop faster.
+  const damping = THREE.MathUtils.clamp(ui.zoomDamping, 0.0001, 0.9999);
+  const retention = 1.0 - damping;
+  zoomVelocity *= retention;
+
+  if (Math.abs(zoomVelocity) < 0.01) zoomVelocity = 0;
 }
 
 function animate() {
@@ -63,6 +117,7 @@ function animate() {
   updateThree(); // ***
 
   if (controls) {
+    applyCustomZoom();
     controls.update();
     updateMemoryTextOpacity();
   }

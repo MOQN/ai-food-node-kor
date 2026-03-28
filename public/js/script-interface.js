@@ -652,21 +652,57 @@ async function loadShaderTestImages() {
     window.updateSequenceDisplay(imagePairs.length, currentImageIndex);
   }
 
-  const applyWhenReady = () => {
+  const applyNow = () => {
     if (window.updateThreeJSMaterial) {
+      // Use shader's default swapDuration so transition runs over time
       initThreeJSShader(pair.image, pair.depth, {
-        animateIn: true,
-        swapDuration: 8.0
+        animateIn: true
       });
     } else {
-      setTimeout(applyWhenReady, 100);
+      setTimeout(applyNow, 80);
     }
   };
 
-  setTimeout(applyWhenReady, 300);
+  setTimeout(applyNow, 120);
+}
+
+// Show image at index (0 = first, -1 = last). Options forwarded to shader (animateIn, swapDuration)
+function showImageAtIndex(idx, options = {}) {
+  if (!Array.isArray(imagePairs) || imagePairs.length === 0) {
+    console.warn('[showImageAtIndex] No image pairs available');
+    return;
+  }
+
+  let targetIndex = 0;
+  if (Number(idx) === -1) {
+    targetIndex = Math.max(0, imagePairs.length - 1);
+  } else {
+    targetIndex = Math.max(0, Math.min(Number(idx) || 0, imagePairs.length - 1));
+  }
+
+  currentImageIndex = targetIndex;
+  const pair = imagePairs[currentImageIndex];
+
+  showStep('result');
+  if (window.updateSequenceDisplay) {
+    window.updateSequenceDisplay(imagePairs.length, currentImageIndex);
+  }
+
+  const applyNow = () => {
+    if (window.updateThreeJSMaterial) {
+      const shaderOptions = Object.assign({ animateIn: true }, options);
+      // Do not override swapDuration so shader uses its configured time-based duration
+      initThreeJSShader(pair.image, pair.depth, shaderOptions);
+    } else {
+      setTimeout(applyNow, 80);
+    }
+  };
+
+  setTimeout(applyNow, 120);
 }
 
 window.loadShaderTestImages = loadShaderTestImages;
 window.updateSequenceDisplay = updateSequenceDisplay;
 window.loadImagePairs = loadImagePairs;
 window.resetImageSequence = resetImageSequence;
+window.showImageAtIndex = showImageAtIndex;

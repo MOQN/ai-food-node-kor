@@ -2,13 +2,15 @@ let pane;
 let isGuiVisible = true;
 let ui = {
   sequence: 'Current: 0 | Total: 0',
-  orbitFullControlEnabled: true,
+  orbitFullControlEnabled: false,
   fps: 0,
   depthScale: 100,
   meshTilt: 0.0,
   meshScale: 1.8,
   incomingDepthOffset: -420,
-  outgoingDepthOffset: 120
+  outgoingDepthOffset: 120,
+  zoomSpeed: 0.01,
+  zoomDamping: 0.005
 };
 
 function setupGUI() {
@@ -80,6 +82,22 @@ function setupGUI() {
     min: 0,
     max: 200,
     step: 1,
+  });
+
+  pane.addBlade({ view: 'separator' });
+
+  pane.addBinding(ui, 'zoomSpeed', {
+    label: 'Zoom Speed',
+    min: 0.001,
+    max: 0.05,
+    step: 0.001,
+  });
+
+  pane.addBinding(ui, 'zoomDamping', {
+    label: 'Zoom Damping',
+    min: 0.001,
+    max: 0.03,
+    step: 0.001,
   });
 
 }

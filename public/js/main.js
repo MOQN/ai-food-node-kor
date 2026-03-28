@@ -75,18 +75,60 @@ window.addEventListener('keydown', (event) => {
   if (key === 'h') {
     if (typeof window.toggleGUI === 'function') {
       window.toggleGUI();
+      // Update cursor visibility based on GUI state
+      if (isGuiVisible) {
+        // Show the cursor when the GUI is visible
+        document.body.style.cursor = 'default';
+      } else {
+        // Hide the cursor when the GUI is hidden
+        document.body.style.cursor = 'none';
+      }
     }
+  }
+
+  if (key === '1') {
+    event.preventDefault();
+    window._pendingActionToken = Symbol();
+    const token = window._pendingActionToken;
+    const run = () => {
+      if (window._pendingActionToken !== token) return;
+      if (typeof window.isShaderTransitionActive === 'function' && window.isShaderTransitionActive()) {
+        requestAnimationFrame(run);
+        return;
+      }
+      if (typeof window.showImageAtIndex === 'function') window.showImageAtIndex(0);
+    };
+    run();
+  }
+
+  if (key === '9') {
+    event.preventDefault();
+    window._pendingActionToken = Symbol();
+    const token = window._pendingActionToken;
+    const run = () => {
+      if (window._pendingActionToken !== token) return;
+      if (typeof window.isShaderTransitionActive === 'function' && window.isShaderTransitionActive()) {
+        requestAnimationFrame(run);
+        return;
+      }
+      if (typeof window.showImageAtIndex === 'function') window.showImageAtIndex(-1);
+    };
+    run();
   }
 
   if (key === '0') {
     event.preventDefault();
-
-    if (typeof window.hideAllShaderMeshes === 'function') {
-      window.hideAllShaderMeshes();
-    }
-
-    if (typeof window.resetImageSequence === 'function') {
-      window.resetImageSequence();
-    }
+    window._pendingActionToken = Symbol();
+    const token = window._pendingActionToken;
+    const run = () => {
+      if (window._pendingActionToken !== token) return;
+      if (typeof window.isShaderTransitionActive === 'function' && window.isShaderTransitionActive()) {
+        requestAnimationFrame(run);
+        return;
+      }
+      if (typeof window.hideAllShaderMeshes === 'function') window.hideAllShaderMeshes();
+      if (typeof window.resetImageSequence === 'function') window.resetImageSequence();
+    };
+    run();
   }
 });

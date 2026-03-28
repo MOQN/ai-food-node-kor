@@ -313,6 +313,27 @@ async function trigger25DAppearance(imageURI, depthURI, options = {}) {
 
     if (!shaderMaterials[0] || !shaderMaterials[1]) return;
 
+    // If a swap is already in progress, force-complete it so we start from a clean state
+    if (isSwapping) {
+      if (outgoingIndex >= 0 && shaderMaterials[outgoingIndex]) {
+        shaderMaterials[outgoingIndex].uniforms.uProgress.value = 1.0;
+        shaderMaterials[outgoingIndex].uniforms.uPhase.value = 0.0;
+        shaderMaterials[outgoingIndex].uniforms.uVisible.value = 0.0;
+      }
+      if (incomingIndex >= 0) {
+        currentVisibleIndex = incomingIndex;
+        if (shaderMaterials[incomingIndex]) {
+          shaderMaterials[incomingIndex].uniforms.uProgress.value = 1.0;
+        }
+      }
+      if (currentVisibleIndex >= 0) {
+        setSingleVisibleRenderOrder(currentVisibleIndex);
+      }
+      outgoingIndex = -1;
+      incomingIndex = -1;
+      isSwapping = false;
+    }
+
     if (currentVisibleIndex < 0) {
       const firstSlot = 0;
       applyTexturesToSlot(firstSlot, colorTexture, depthTexture);
